@@ -1,0 +1,71 @@
+﻿@page "/countries"
+@using BlazorApp.Shared
+@inject HttpClient Http
+
+<PageTitle>Countries</PageTitle>
+
+<h1>Countries</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (countries == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Flag</th>
+                <th>Name</th>
+                <th>Capital</th>
+                <th>Population</th>
+                <th>Area</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var country in countries)
+            {
+                <tr>
+                    <td><img src=@country.FlagUrl() alt="@country.Name" style="width: 30px; height: 20px;" /></td>
+                    <td>@country.Name</td>
+                    <td>@country.Capital</td>
+                    <td>@country.Population</td>
+                    <td>@country.Area</td>
+                    <td><button @onclick="() => DeleteCountry(country)">Delete</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Country[] countries = new Country[] { };
+    private Country? newCountry { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    private async Task DeleteCountry(Country country)
+    {
+        try
+        {
+            await Http.DeleteAsync($"/api/DeleteCountry/{country.RowKey}");
+            countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+}
