@@ -1,0 +1,96 @@
+﻿@page "/addcountry"
+@using BlazorApp.Shared
+@inject HttpClient Http
+
+<PageTitle>Countries</PageTitle>
+
+<h1>Countries</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+
+<form method="post" @onsubmit="Submit" @formname="starship-plain-form">
+    <AntiforgeryToken />
+    <div>
+        <label>
+            Name:
+            <InputText @bind-Value="newCountry!.Name" />
+        </label>
+        <label>
+            Capital:
+            <InputText @bind-Value="newCountry!.Capital" />
+        </label>
+        <label>
+            Population:
+            <InputNumber @bind-Value="newCountry!.Population" />
+        </label>
+        <label>
+            Area:
+            <InputNumber @bind-Value="newCountry!.Area" />
+        </label>
+        <label>
+            Flag:
+            <InputFile @bind-Value="flag" OnChange="HandleFileSelected" />
+        </label>
+    </div>
+    <div>
+        <button type="submit">Submit</button>
+    </div>
+</form>
+
+
+@code {
+    private Country? newCountry { get; set; }
+    private IBrowserFile? flag { get; set; }
+    private string uploadStatus = string.Empty;
+    protected override void OnInitialized()
+    {
+        newCountry = new Country();
+    }
+
+    private async Task Submit()
+    {
+        if (flag == null)
+        {
+            uploadStatus = "Please select a file.";
+            return;
+        }
+
+        try
+        {
+            // Prepare the form content (including file and other form fields)
+            var content = new MultipartFormDataContent();
+
+            // Add form data fields
+            content.Add(new StringContent(newCountry.Name), "name");
+
+            // Add the file to the form data
+            var fileContent = new StreamContent(flag.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024)); // 10MB max file
+
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(flag.ContentType);
+
+            content.Add(fileContent, "file", newCountry.Name);
+            await Http.PostAsync("/api/UploadFlag", content);
+        }
+        catch (Exception ex)
+        {
+            uploadStatus = ex.Message;
+            return;
+        }
+
+        try
+        {
+            await Http.PostAsJsonAsync("/api/AddCountry", newCountry);
+            newCountry = new Country();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        flag = e.File;
+    }
+}
