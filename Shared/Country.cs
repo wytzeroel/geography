@@ -2,6 +2,7 @@ using Azure;
 using Azure.Data.Tables;
 
 using System;
+using System.Numerics;
 
 namespace BlazorApp.Shared
 {
@@ -22,5 +23,7 @@ namespace BlazorApp.Shared
 
         public string PopulationFormatted() => Population.ToString("N0");
         public string AreaFormatted() => Area.ToString("N0");
+
+        public double PopulationDensity() => Math.Round(Population / Area, 2);
     }
 }
