@@ -28,11 +28,12 @@ else
             @foreach (var country in countries)
             {
                 <tr>
-                    <td><img src=@country.FlagUrl() alt="@country.Name" style="width: 30px; height: 20px;" /></td>
+                    <td><img src=@country.FlagUrl() alt="@country.Name"
+                            style="width: 30px; height: 20px; border: 1px black solid;" /></td>
                     <td>@country.Name</td>
                     <td>@country.Capital</td>
-                    <td>@country.Population</td>
-                    <td>@country.Area</td>
+                    <td>@country.PopulationFormatted()</td>
+                    <td>@country.AreaFormatted()</td>
                     <td><button @onclick="() => DeleteCountry(country)">Delete</button></td>
                 </tr>
             }

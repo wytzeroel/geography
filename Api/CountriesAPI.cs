@@ -48,7 +48,7 @@ namespace Api
         [Function("AddCountry")]
         public HttpResponseData AddCountry([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req, [FromBody] Country country)
         {
-            _logger.LogInformation(country.Name);
+            _logger.LogInformation($"{country.Area}");
             country.RowKey = country.Name;
             country.PartitionKey = "Country";
             _tableClient.AddEntity(country);
