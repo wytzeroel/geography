@@ -1,0 +1,387 @@
+@page "/varietyquiz"
+@using BlazorApp.Shared
+@inject HttpClient Http
+
+<PageTitle>Variety Quiz</PageTitle>
+
+<h1>Variety Quiz</h1>
+
+<div class="container">
+    <div class="row">
+        <div style="position: fixed; top: 15%; padding: 10px 0 px; width: 200px;">
+            <button class="btn btn-primary" @onclick="() => playing = !playing">@(playing ? "Stop" : "Start")</button>
+            <button class="btn btn-danger" @onclick="() => gameOver = true">Give up</button>
+            <h3 style="width: 200px;">Score: @score / 40</h3>
+            <h3 style="width: 200px;">Time left: @(timeLeft / 60):@(timeLeft % 60)</h3>
+            @if (gameOver)
+            {
+                <h2 style="color: #de1a24">Game Over</h2>
+                if (!hasSavedHighScore)
+                {
+                    <InputText @bind-Value="highScoreName" placeholder="Enter high score name"></InputText>
+                    <br>
+                    <button class="btn btn-success" @onclick="() => SaveHighScore()">Save</button>
+                }
+
+                <button class="btn btn-primary" @onclick="() => Restart()">Play again</button>
+            }
+            <br>
+            <h3 style="width: 150px;">High scores</h3>
+
+            <table class="table table-striped" style="width: 150px;">
+                <tbody>
+                    @foreach (var highScore in highScores)
+                    {
+
+                        <tr>
+                            <td>@highScore.Name</td>
+                            <td>@highScore.Score</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="col-2">
+        </div>
+        <div class="col-10">
+            <div class="row">
+                <div class="col-6">
+                    <h2>Top 10 countries by area</h2>
+                    @if (playing)
+                    {
+                        <InputText @bind-Value="topAreaGuess" @oninput="CheckTopAreaGuess" />
+                    }
+                    <table class="table table-striped">
+                        <thead>
+
+                            <tr>
+                                <th>Country</th>
+                                <th>Area</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            @foreach (var country in topAreaCountries)
+                            {
+                                if (country.wasGuessed)
+                                {
+                                    <tr>
+                                        <td>@country.Name</td>
+                                        <td>@country.AreaFormatted()</td>
+                                    </tr>
+                                }
+                                else if (gameOver)
+                                {
+                                    <tr>
+                                        <td style="color: red;">@country.Name</td>
+                                        <td style="color: red;">@country.AreaFormatted()</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td>?</td>
+                                        <td>?</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-6">
+                    <h2>Top 10 countries by density</h2>
+                    @if (playing)
+                    {
+                        <InputText @bind-Value="@topDensityGuess" @oninput="CheckTopDensityGuess" />
+                    }
+                    <table class="table table-striped">
+                        <thead>
+
+                            <tr>
+                                <th>Country</th>
+                                <th>Density</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            @foreach (var country in topDensityCountries)
+                            {
+                                if (country.wasGuessed)
+                                {
+                                    <tr>
+                                        <td>@country.Name</td>
+                                        <td>@country.PopulationDensity()</td>
+                                    </tr>
+                                }
+                                else if (gameOver)
+                                {
+                                    <tr>
+                                        <td style="color: red;">@country.Name</td>
+                                        <td style="color: red;">@country.PopulationDensity()</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td>?</td>
+                                        <td>?</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <h2>Top 10 countries by population</h2>
+                    @if (playing)
+                    {
+                        <InputText @bind-Value="@topPopulationGuess" @oninput="CheckTopPopulationGuess" />
+                    }
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>Population</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            @foreach (var country in topPopulationCountries)
+                            {
+                                if (country.wasGuessed)
+                                {
+                                    <tr>
+                                        <td>@country.Name</td>
+                                        <td>@country.PopulationFormatted()</td>
+                                    </tr>
+                                }
+                                else if (gameOver)
+                                {
+                                    <tr>
+                                        <td style="color: red;">@country.Name</td>
+                                        <td style="color: red;">@country.PopulationFormatted()</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td>?</td>
+                                        <td>?</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-6">
+                    <h2>Least 10 countries by density</h2>
+                    @if (playing)
+                    {
+                        <InputText @bind-Value="@leastDensityGuess" @oninput="CheckLeastDensityGuess" />
+                    }
+                    <table class="table table-striped">
+                        <thead>
+
+                            <tr>
+                                <th>Country</th>
+                                <th>Density</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            @foreach (var country in leastDensityCountries)
+                            {
+                                if (country.wasGuessed)
+                                {
+                                    <tr>
+                                        <td>@country.Name</td>
+                                        <td>@country.PopulationDensity()</td>
+                                    </tr>
+                                }
+                                else if (gameOver)
+                                {
+                                    <tr>
+                                        <td style="color: red;">@country.Name</td>
+                                        <td style="color: red;">@country.PopulationDensity()</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td>?</td>
+                                        <td>?</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    class CountryAnswer : Country
+    {
+        public bool wasGuessed { get; set; }
+
+        // Constructor that takes Country object as input
+        public CountryAnswer(Country country)
+        {
+            RowKey = country.RowKey;
+            PartitionKey = country.PartitionKey;
+
+            Name = country.Name;
+            Capital = country.Capital;
+            Population = country.Population;
+            Area = country.Area;
+            wasGuessed = false;
+        }
+    }
+
+    public string topAreaGuess { get; set; }
+
+    public async void CheckTopAreaGuess(ChangeEventArgs e)
+    {
+        string guess = e.Value.ToString();
+        if (topAreaCountries.Any(c => c.Name == guess & !c.wasGuessed))
+        {
+            topAreaCountries.First(c => c.Name == guess).wasGuessed = true;
+            topAreaGuess = "";
+            await Task.Delay(1);
+            StateHasChanged();
+            topAreaGuess = null;
+            StateHasChanged();
+            score++;
+        }
+    }
+    public string topDensityGuess { get; set; }
+    public async void CheckTopDensityGuess(ChangeEventArgs e)
+    {
+        string guess = e.Value.ToString();
+        if (topDensityCountries.Any(c => c.Name == guess & !c.wasGuessed))
+        {
+            topDensityCountries.First(c => c.Name == guess).wasGuessed = true;
+            topDensityGuess = "";
+            await Task.Delay(1);
+            StateHasChanged();
+            topDensityGuess = null;
+            StateHasChanged();
+            score++;
+        }
+    }
+    public string topPopulationGuess { get; set; }
+    public async void CheckTopPopulationGuess(ChangeEventArgs e)
+    {
+        string guess = e.Value.ToString();
+        if (topPopulationCountries.Any(c => c.Name == guess & !c.wasGuessed))
+        {
+            topPopulationCountries.First(c => c.Name == guess).wasGuessed = true;
+            topPopulationGuess = "";
+            await Task.Delay(1);
+            StateHasChanged();
+            topPopulationGuess = null;
+            StateHasChanged();
+            score++;
+        }
+    }
+    public string leastDensityGuess { get; set; }
+    public async void CheckLeastDensityGuess(ChangeEventArgs e)
+    {
+        string guess = e.Value.ToString();
+        if (leastDensityCountries.Any(c => c.Name == guess & !c.wasGuessed))
+        {
+            leastDensityCountries.First(c => c.Name == guess).wasGuessed = true;
+            leastDensityGuess = "";
+            await Task.Delay(1);
+            StateHasChanged();
+            leastDensityGuess = null;
+            StateHasChanged();
+            score++;
+        }
+    }
+
+    public int score = 0;
+    public bool playing = false;
+    public bool gameOver = false;
+    public bool hasSavedHighScore = false;
+    public string highScoreName = string.Empty;
+    public int timeLeft = 10 * 60; // 10 minutes
+    private HighScore[] highScores = new HighScore[] { };
+
+    private CountryAnswer[] topDensityCountries = new CountryAnswer[] { };
+    private CountryAnswer[] topPopulationCountries = new CountryAnswer[] { };
+    private CountryAnswer[] topAreaCountries = new CountryAnswer[] { };
+    private CountryAnswer[] leastDensityCountries = new CountryAnswer[] { };
+
+    protected async Task SaveHighScore()
+    {
+        if (hasSavedHighScore)
+        {
+            return;
+        }
+        try
+        {
+            HighScore newHighScore = new HighScore(highScoreName, score, "VarietyQuiz");
+            await Http.PostAsJsonAsync("/api/AddHighScore", newHighScore);
+            hasSavedHighScore = true;
+            highScores = await Http.GetFromJsonAsync<HighScore[]>("/api/GetHighScores/VarietyQuiz") ?? new HighScore[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    protected async void Restart()
+    {
+        Country[] countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+        playing = false;
+        gameOver = false;
+        hasSavedHighScore = false;
+        timeLeft = 10 * 60;
+        highScoreName = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Country[] countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+            topAreaCountries = countries.OrderByDescending(c => c.Area).Take(10).Select(c => new CountryAnswer(c)).ToArray();
+            topDensityCountries = countries.OrderByDescending(c => c.PopulationDensity()).Take(10).Select(c => new
+            CountryAnswer(c)).ToArray();
+            topPopulationCountries = countries.OrderByDescending(c => c.Population).Take(10).Select(c => new
+            CountryAnswer(c)).ToArray();
+            leastDensityCountries = countries.OrderBy(c => c.PopulationDensity()).Take(10).Select(c => new
+            CountryAnswer(c)).ToArray();
+            highScores = await Http.GetFromJsonAsync<HighScore[]>("/api/GetHighScores/VarietyQuiz") ?? new HighScore[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    private System.Timers.Timer _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new();
+        _timer.Interval = 1000;
+        _timer.Elapsed += async (object? sender, System.Timers.ElapsedEventArgs e) =>
+        {
+            if (playing && timeLeft > 0 & !gameOver)
+            {
+                timeLeft--;
+                gameOver = timeLeft == 0;
+            }
+            await InvokeAsync(StateHasChanged);
+        };
+        _timer.Enabled = true;
+    }
+}
