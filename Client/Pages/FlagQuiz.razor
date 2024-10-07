@@ -1,0 +1,184 @@
+@page "/flagquiz"
+@using BlazorApp.Shared
+@inject HttpClient Http
+
+<PageTitle>Flag Quiz</PageTitle>
+
+<h1>Flag Quiz</h1>
+
+<div class="container">
+    <div class="row">
+        <div style="position: fixed; top: 15%; padding: 10px 0 px; width: 200px;">
+            <button class="btn btn-primary" @onclick="() => playing = !playing">@(playing ? "Stop" : "Start")</button>
+            <button class="btn btn-danger" @onclick="() => gameOver = true">Give up</button>
+            <h3 style="width: 200px;">Score: @score / @(countryAnswers.Length)</h3>
+            <h3 style="width: 200px;">Time left: @(timeLeft / 60):@(timeLeft % 60)</h3>
+            @if (gameOver)
+            {
+                <h2 style="color: #de1a24">Game Over</h2>
+                if (!hasSavedHighScore)
+                {
+                    <InputText @bind-Value="highScoreName" placeholder="Enter high score name"></InputText>
+                    <br>
+                    <button class="btn btn-success" @onclick="() => SaveHighScore()">Save</button>
+                }
+
+                <button class="btn btn-primary" @onclick="() => Restart()">Play again</button>
+            }
+            <br>
+            <h3 style="width: 150px;">High scores</h3>
+
+            <table class="table table-striped" style="width: 150px;">
+                <tbody>
+                    @foreach (var highScore in highScores)
+                    {
+
+                        <tr>
+                            <td>@highScore.Name</td>
+                            <td>@highScore.Score</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="col-2">
+        </div>
+        <div class="col-10">
+            <div class="row">
+                @foreach (var country in countryAnswers)
+                {
+                    <div class="col-6 col-md-4 col-lg-3" style="justify-content: center;">
+                        @if (playing || gameOver)
+                        {
+                            <img src="@country.FlagUrl()" class="card-img-top" alt="@country.Name"
+                                style="border: 1px solid black; height: 125px; width: auto; margin:auto; display:block" />
+                        }
+                        @if (!gameOver)
+                        {
+
+                            <div class="card-body">
+                                <InputText @bind-Value="country.Answer" style="@country.BackGroundColor()" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="card-body">
+                                <h5 class="card-title" style="@country.TextColor()">@country.Name</h5>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    class CountryAnswer : Country
+    {
+        public string Answer { get; set; }
+
+        // Constructor that takes Country object as input
+        public CountryAnswer(Country country)
+        {
+            RowKey = country.RowKey;
+            PartitionKey = country.PartitionKey;
+
+            Name = country.Name;
+            Capital = country.Capital;
+            Population = country.Population;
+            Area = country.Area;
+            Answer = string.Empty;
+        }
+
+        public bool isCorrect()
+        {
+            return Name == Answer;
+        }
+
+        public string BackGroundColor()
+        {
+            return isCorrect() ? "background: #056517" : (Answer == string.Empty ? "" : "background: #de1a24");
+        }
+
+        public string TextColor()
+        {
+            return isCorrect() ? "color: #056517" : "color: #de1a24";
+        }
+    }
+
+    public int score => countryAnswers.Count(c => c.isCorrect());
+    public bool playing = false;
+    public bool gameOver = false;
+    public bool hasSavedHighScore = false;
+    public string highScoreName = string.Empty;
+    public int timeLeft = 10 * 60; // 10 minutes
+
+    private CountryAnswer[] countryAnswers = new CountryAnswer[] { };
+
+    private HighScore[] highScores = new HighScore[] { };
+
+    protected async Task SaveHighScore()
+    {
+        if (hasSavedHighScore)
+        {
+            return;
+        }
+        try
+        {
+            HighScore newHighScore = new HighScore(highScoreName, score, "FlagQuiz");
+            await Http.PostAsJsonAsync("/api/AddHighScore", newHighScore);
+            hasSavedHighScore = true;
+            highScores = await Http.GetFromJsonAsync<HighScore[]>("/api/GetHighScores/FlagQuiz") ?? new HighScore[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    protected async void Restart()
+    {
+        Country[] countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+        countries = countries.OrderBy(c => Guid.NewGuid()).ToArray();
+        countryAnswers = countries.Select(c => new CountryAnswer(c)).ToArray();
+        playing = false;
+        gameOver = false;
+        hasSavedHighScore = false;
+        timeLeft = 10 * 60;
+        highScoreName = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Country[] countries = await Http.GetFromJsonAsync<Country[]>("/api/GetCountries") ?? new Country[] { };
+            countries = countries.OrderBy(c => Guid.NewGuid()).ToArray();
+            countryAnswers = countries.Select(c => new CountryAnswer(c)).ToArray();
+            highScores = await Http.GetFromJsonAsync<HighScore[]>("/api/GetHighScores/FlagQuiz") ?? new HighScore[] { };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+
+    private System.Timers.Timer _timer;
+
+    protected override void OnInitialized()
+    {
+        _timer = new();
+        _timer.Interval = 1000;
+        _timer.Elapsed += async (object? sender, System.Timers.ElapsedEventArgs e) =>
+        {
+            if (playing && timeLeft > 0 & !gameOver)
+            {
+                timeLeft--;
+                gameOver = timeLeft == 0;
+            }
+            await InvokeAsync(StateHasChanged);
+        };
+        _timer.Enabled = true;
+    }
+}
